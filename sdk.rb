@@ -530,7 +530,10 @@
     list_courses: {
       input_fields: lambda do
         [
-          {name: "user_id", optional: false}
+          {
+            name: "user_id",
+            optional: false
+          }
         ]
       end,
       execute: lambda do |connection, input|
@@ -552,11 +555,59 @@
     get_course: {
       input_fields: lambda do
         [
-          {name: "course_id", optional: false}
+          {
+            name: "course_id",
+            control_type: :number,
+            optional: false
+          },
+          {
+            name: "account_id",
+            control_type: :number,
+            optional: true
+          },
+          {
+            name: "all_courses",
+            control_type: :checkbox,
+            optional: true,
+            hint: "Include recently deleted courses"
+          },
+          {
+            name: "permissions",
+            control_type: :checkbox,
+            optional: true,
+            hint: "What permissions the user has for this course"
+          },
+          {
+            name: "observed_users",
+            control_type: :checkbox,
+            optional: true,
+            hint: "Observed users in the enrollments"
+          },
+          {
+            name: "course_image",
+            control_type: :checkbox,
+            optional: true,
+            hint: "Available when there is a course image and the course image feature flag has been enabled"
+          }
         ]
       end,
       execute: lambda do |connection, input|
-        get("https://#{connection['domain']}/api/v1/courses/#{input['course_id']}")
+        include_fields = [
+          "all_courses",
+          "permissions",
+          "observed_users",
+          "course_image"].
+          select{|v| input[v]}.
+          join(",")
+        if input["account_id"].present?
+          get("https://#{connection['domain']}/api/v1/accounts/#{input['account_id']}/courses/#{input['course_id']}").
+            payload("include[]": include_fields).
+            request_format_www_form_urlencoded
+        else
+          get("https://#{connection['domain']}/api/v1/courses/#{input['course_id']}").
+            payload("include[]": include_fields).
+            request_format_www_form_urlencoded
+        end
       end,
       output_fields: lambda do |object_definitions|
         {
