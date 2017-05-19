@@ -1,5 +1,5 @@
 {
-  title: 'Canvas',
+  title: "Canvas",
   connection: {
     fields: [
       {
@@ -57,8 +57,6 @@
       end,
       fields: lambda do |object_definitions|
         [
-          #TODO Term
-          #TODO Course Progress
           {
             name: "id",
             type: :integer,
@@ -162,6 +160,58 @@
             name: "needs_grading_count",
             type: :integer,
             control_type: :number
+          },
+          {
+            name: "term",
+            type: :object,
+            properties: [
+              {
+                name: "id",
+                type: :integer,
+                control_type: :number
+              },
+              {
+                name: "name",
+                type: :string,
+                control_type: :text
+              },
+              {
+                name: "start_at",
+                type: :datetime,
+                control_type: :timestamp
+              },
+              {
+                name: "end_at",
+                type: :datetime,
+                control_type: :timestamp
+              }
+            ]
+          },
+          {
+            name: "course_progress",
+            type: :object,
+            properties: [
+              {
+                name: "requirement_count",
+                type: :integer,
+                control_type: :number
+              },
+              {
+                name: "requirement_completed_count",
+                type: :integer,
+                control_type: :number
+              },
+              {
+                name: "next_requirement_url",
+                type: :string,
+                control_type: :url
+              },
+              {
+                name: "completed_at",
+                type: :datetime,
+                control_type: :timestamp
+              }
+            ]
           },
           {
             name: "apply_assignment_group_weights",
