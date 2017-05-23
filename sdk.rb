@@ -86,7 +86,7 @@
             name: "workflow_state",
             type: :string,
             control_type: :select,
-            pick_list: "workflow_state"
+            pick_list: "course_workflow_states"
           },
           {
             name: "account_id",
@@ -164,28 +164,7 @@
           {
             name: "term",
             type: :object,
-            properties: [
-              {
-                name: "id",
-                type: :integer,
-                control_type: :number
-              },
-              {
-                name: "name",
-                type: :string,
-                control_type: :text
-              },
-              {
-                name: "start_at",
-                type: :datetime,
-                control_type: :timestamp
-              },
-              {
-                name: "end_at",
-                type: :datetime,
-                control_type: :timestamp
-              }
-            ]
+            properties: object_definitions["enrollment_term"]
           },
           {
             name: "course_progress",
@@ -323,7 +302,7 @@
             name: "time_zone",
             type: :string,
             control_type: :text
-          },
+          }
         ]
       end
     },
@@ -521,6 +500,35 @@
           }
         ]
       end
+    },
+    enrollment_term: {
+      preview: lambda do |connection|
+        get("https://#{connection['domain']}/api/v1/accounts/1/terms").first
+      end,
+      fields: lambda do |object_definitions|
+        [
+          {
+            name: "id",
+            type: :integer,
+            control_type: :number
+          },
+          {
+            name: "name",
+            type: :string,
+            control_type: :text
+          },
+          {
+            name: "start_at",
+            type: :datetime,
+            control_type: :timestamp
+          },
+          {
+            name: "end_at",
+            type: :datetime,
+            control_type: :timestamp
+          }
+        ]
+      end
     }
   },
   test: lambda do |connection|
@@ -616,14 +624,61 @@
           properties: object_definitions["course"]
         }
       end
+    },
+    list_enrollment_terms: {
+      input_fields: lambda do
+        [
+          {
+            name: "account_id",
+            control_type: :number,
+            optional: false
+          },
+          {
+            name: "workflow_state",
+            type: :array,
+            control_type: :select,
+            pick_list: "term_workflow_states",
+            optional: false
+          },
+          {
+            name: "overrides",
+            type: :boolean,
+            control_type: :checkbox,
+            optional: true,
+            hint: "Include overridden term dates"
+          }
+        ]
+      end,
+      execute: lambda do |connection, input|
+        get("https://#{connection['domain']}/api/v1/accounts/#{input['account_id']}/terms").
+          payload("include[]": input["overrides"] ? "overrides" : "",
+                  "workflow_state[]": (input["workflow_state"] or "")).
+          request_format_www_form_urlencoded
+      end,
+      output_fields: lambda do |object_definitions|
+        [
+          {
+            name: "enrollment_terms",
+            type: :object,
+            properties: object_definitions["enrollment_term"]
+          }
+        ]
+      end
     }
   },
   pick_lists: {
-    workflow_state: lambda do |connection|
+    course_workflow_states: lambda do |connection|
       [
         ["Unpublished", "unpublished"],
         ["Available", "available"],
         ["Completed", "completed"]
+      ]
+    end,
+    term_workflow_states: lambda do |connection|
+      [
+        ["Active", "active"],
+        ["Deleted", "deleted"],
+        ["All", "all"]
       ]
     end,
     default_views: lambda do |connection|
