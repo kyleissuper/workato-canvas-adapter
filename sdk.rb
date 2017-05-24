@@ -545,7 +545,7 @@
           },
           {
             name: "workflow_state",
-            type: :array,
+            type: :string,
             control_type: :select,
             pick_list: "term_workflow_states",
             optional: false
@@ -559,16 +559,17 @@
           },
           {
             name: 'since',
-            type: :timestamp,
-            hint: 'Defaults to tickets created after the recipe is first started'
+            type: :timestamp
           }
         ]
       end,
       poll: lambda do |connection, input, last_created_since|
+        created_since = last_created_since || input['since'] || Time.now
         enrollment_terms = get("https://#{connection['domain']}/api/v1/accounts/#{input['account_id']}/terms").
           payload("include[]": input["overrides"] ? "overrides" : "",
                   "workflow_state[]": (input["workflow_state"] or "")).
           request_format_www_form_urlencoded["enrollment_terms"].
+          select { |term| term["created_at"] >= created_since }.
           sort_by { |term| term["created_at"] }
         next_created_since = enrollment_terms.last["created_at"] unless enrollment_terms.blank?
         {
@@ -685,7 +686,7 @@
           },
           {
             name: "workflow_state",
-            type: :array,
+            type: :string,
             control_type: :select,
             pick_list: "term_workflow_states",
             optional: false
