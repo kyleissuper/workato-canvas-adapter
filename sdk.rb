@@ -534,6 +534,56 @@
   test: lambda do |connection|
     get("https://#{connection['domain']}/api/v1/courses")
   end,
+  triggers: {
+    new_enrollment_term: {
+      input_fields: lambda do
+        [
+          {
+            name: "account_id",
+            control_type: :number,
+            optional: false
+          },
+          {
+            name: "workflow_state",
+            type: :array,
+            control_type: :select,
+            pick_list: "term_workflow_states",
+            optional: false
+          },
+          {
+            name: "overrides",
+            type: :boolean,
+            control_type: :checkbox,
+            optional: true,
+            hint: "Include overridden term dates"
+          },
+          {
+            name: 'since',
+            type: :timestamp,
+            hint: 'Defaults to tickets created after the recipe is first started'
+          }
+        ]
+      end,
+      poll: lambda do |connection, input, last_created_since|
+        enrollment_terms = get("https://#{connection['domain']}/api/v1/accounts/#{input['account_id']}/terms").
+          payload("include[]": input["overrides"] ? "overrides" : "",
+                  "workflow_state[]": (input["workflow_state"] or "")).
+          request_format_www_form_urlencoded["enrollment_terms"].
+          sort_by { |term| term["created_at"] }
+        next_created_since = enrollment_terms.last["created_at"] unless enrollment_terms.blank?
+        {
+          events: enrollment_terms,
+          next_poll: next_created_since
+        }
+      end,
+      dedup: lambda do |enrollment_term|
+        enrollment_term["id"]
+      end,
+      output_fields: lambda do |object_definitions|
+        object_definitions["enrollment_term"]
+      end
+    }
+  },
   actions: {
     list_courses: {
       input_fields: lambda do
